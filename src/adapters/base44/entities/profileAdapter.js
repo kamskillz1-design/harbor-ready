@@ -23,6 +23,6 @@ export async function getMyProfile() {
     .select("*")
     .eq("id", userId)
     .maybeSingle();
-  if (error) throw error;
+  if (error) return null;
   return data ? mapProfile(data) : null;
 }
