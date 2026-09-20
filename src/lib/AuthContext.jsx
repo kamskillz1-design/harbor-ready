@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }) => {
       if (currentUser) {
         setUser(currentUser);
         setIsAuthenticated(true);
+        setAuthError(null);
         if (currentUser.language && isSupportedLanguage(currentUser.language)) {
           setAppLanguage(currentUser.language);
         }
@@ -39,10 +40,6 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setIsLoadingAuth(false);
       setAuthChecked(true);
-      setAuthError({
-        type: "auth_required",
-        message: "Authentication required",
-      });
     }
   }, []);
 
@@ -55,10 +52,6 @@ export const AuthProvider = ({ children }) => {
       await checkUserAuth();
     } catch (error) {
       console.error("Unexpected error:", error);
-      setAuthError({
-        type: "unknown",
-        message: error.message || "An unexpected error occurred",
-      });
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
       setAuthChecked(true);
@@ -68,19 +61,28 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     checkAppState();
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT" || !session?.user) {
-        if (event === "SIGNED_OUT") {
-          setUser(null);
-          setIsAuthenticated(false);
-        }
+      if (event === "SIGNED_OUT") {
+        setUser(null);
+        setIsAuthenticated(false);
         setAuthChecked(true);
         setIsLoadingAuth(false);
         return;
       }
-      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+      if (!session?.user) {
+        setAuthChecked(true);
+        setIsLoadingAuth(false);
+        return;
+      }
+      if (
+        event === "INITIAL_SESSION" ||
+        event === "SIGNED_IN" ||
+        event === "TOKEN_REFRESHED" ||
+        event === "USER_UPDATED"
+      ) {
         const merged = await mergeUser(session.user);
         setUser(merged);
         setIsAuthenticated(!!merged);
+        setAuthError(null);
         if (merged?.language && isSupportedLanguage(merged.language)) {
           setAppLanguage(merged.language);
         }

@@ -8,11 +8,17 @@ export function authRedirectBase() {
 
 export async function mergeUser(authUser) {
   if (!authUser) return null;
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", authUser.id)
-    .maybeSingle();
+  let profile = null;
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", authUser.id)
+      .maybeSingle();
+    if (!error) profile = data;
+  } catch (e) {
+    profile = null;
+  }
   return {
     id: authUser.id,
     email: authUser.email,
@@ -89,7 +95,8 @@ export async function resendOtp(email) {
 }
 
 export async function loginWithGoogle(returnTo) {
-  const redirectTo = authRedirectBase() + (returnTo && returnTo.startsWith("/") ? returnTo : "/today");
+  const redirectTo =
+    authRedirectBase() + (returnTo && returnTo.startsWith("/") ? returnTo : "/today");
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo },
@@ -108,10 +115,7 @@ export async function resetPassword({ resetToken, email, newPassword }) {
   if (resetToken) {
     const payload = { token: resetToken, type: "recovery" };
     if (email) payload.email = email;
-    const { error: otpError } = await supabase.auth.verifyOtp(payload);
-    if (otpError) {
-      // Session may already exist from the recovery redirect hash.
-    }
+    await supabase.auth.verifyOtp(payload);
   }
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw error;

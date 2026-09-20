@@ -12,6 +12,11 @@ import { toast } from "@/components/ui/use-toast";
 import { safeReturnTo } from "@/lib/authReturnTo";
 import { useI18n } from "@/i18n/useI18n";
 
+function afterAuthPath() {
+  const dest = safeReturnTo();
+  return dest === "/" ? "/today" : dest;
+}
+
 export default function Register() {
   const { t } = useI18n();
   const [email, setEmail] = useState("");
@@ -33,7 +38,7 @@ export default function Register() {
     try {
       const data = await register({ email, password });
       if (data?.session) {
-        window.location.href = safeReturnTo();
+        window.location.href = afterAuthPath();
         return;
       }
       setShowOtp(true);
@@ -49,7 +54,7 @@ export default function Register() {
     setLoading(true);
     try {
       await verifyOtp({ email, otpCode });
-      window.location.href = safeReturnTo();
+      window.location.href = afterAuthPath();
     } catch (err) {
       setError(t("auth.otp.error"));
     } finally {
@@ -71,7 +76,7 @@ export default function Register() {
   };
 
   const handleGoogle = () => {
-    loginWithGoogle(safeReturnTo());
+    loginWithGoogle(afterAuthPath());
   };
 
   if (showOtp) {
