@@ -16,9 +16,8 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  // Post-login destination (e.g. the MCP OAuth consent page sends users here
-  // with returnTo so the grant flow can resume). Same-origin paths only.
   const returnTo = safeReturnTo();
+  const afterLogin = returnTo === "/" ? "/today" : returnTo;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,7 +25,7 @@ export default function Login() {
     setLoading(true);
     try {
       await loginViaEmailPassword(email, password);
-      window.location.href = returnTo;
+      window.location.href = afterLogin;
     } catch (err) {
       setError(t("auth.login.error"));
     } finally {
@@ -35,7 +34,7 @@ export default function Login() {
   };
 
   const handleGoogle = () => {
-    loginWithGoogle(returnTo);
+    loginWithGoogle(afterLogin);
   };
 
   return (
