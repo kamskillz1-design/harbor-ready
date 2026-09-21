@@ -5,15 +5,23 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n/useI18n";
 import { HelpfulnessPicker } from "@/features/toolkit/flows/SimpleExerciseFlow";
 
-const DURATIONS = [60, 120, 180];
+const MINUTES = [1, 2, 3, 5];
 const CYCLE = 12; // 4s in, 2s hold, 6s out
+
+function formatClock(totalSeconds) {
+  const safe = Math.max(0, totalSeconds);
+  const minutes = Math.floor(safe / 60);
+  const seconds = safe % 60;
+  return String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+}
 
 export default function BreathingFlow({ saving, onComplete, onCancel }) {
   const { t } = useI18n();
-  const [phase, setPhase] = useState("select"); // select | running | review
+  const [phase, setPhase] = useState("select");
   const [duration, setDuration] = useState(null);
   const [seconds, setSeconds] = useState(0);
   const timerRef = useRef(null);
+  const [helpfulnessScore, setHelpfulnessScore] = useState(null);
 
   useEffect(() => {
     return () => {
@@ -39,8 +47,6 @@ export default function BreathingFlow({ saving, onComplete, onCancel }) {
     };
   }, [phase, duration]);
 
-  const [helpfulnessScore, setHelpfulnessScore] = useState(null);
-
   if (phase === "select") {
     return (
       <div className="space-y-5">
@@ -48,19 +54,19 @@ export default function BreathingFlow({ saving, onComplete, onCancel }) {
           {t("exercises.slow-breathing.purpose")}
         </p>
         <p className="text-sm font-medium">{t("toolkit.durationLabel")}</p>
-        <div className="grid grid-cols-3 gap-3">
-          {DURATIONS.map((minutes) => (
+        <div className="grid grid-cols-4 gap-2">
+          {MINUTES.map((mins) => (
             <button
-              key={minutes}
+              key={mins}
               type="button"
               onClick={() => {
-                setDuration(minutes * 60);
+                setDuration(mins * 60);
                 setSeconds(0);
                 setPhase("running");
               }}
-              className="rounded-2xl border border-border bg-card py-4 text-sm font-semibold text-foreground transition-colors hover:border-primary/40"
+              className="rounded-2xl border border-border bg-card py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/40"
             >
-              {t("toolkit.minutes", { count: minutes })}
+              {t("toolkit.minutes", { count: mins })}
             </button>
           ))}
         </div>
@@ -80,6 +86,9 @@ export default function BreathingFlow({ saving, onComplete, onCancel }) {
     const scaleClass = stage === "exhale" ? "scale-90" : "scale-110";
     return (
       <div className="flex flex-col items-center gap-6 py-6">
+        <p className="font-mono text-4xl font-semibold tabular-nums text-foreground" aria-live="polite">
+          {formatClock(remaining)}
+        </p>
         <div className="flex h-40 w-40 items-center justify-center">
           <div
             className={cn(
@@ -91,9 +100,6 @@ export default function BreathingFlow({ saving, onComplete, onCancel }) {
         </div>
         <p className="font-display text-2xl font-semibold text-foreground" aria-live="polite">
           {stage === "inhale" ? t("toolkit.inhale") : stage === "hold" ? t("toolkit.hold") : t("toolkit.exhale")}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {t("toolkit.minutes", { count: Math.max(1, Math.ceil(remaining / 60)) })}
         </p>
         <Button variant="ghost" onClick={onCancel}>
           {t("common.cancel")}
