@@ -6,7 +6,6 @@ import { useI18n } from "@/i18n/useI18n";
 import { signOut } from "@/adapters/base44/auth";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
-// Authenticated application shell. Navigation grows with later phases.
 export default function AppShell() {
   const { t } = useI18n();
   return (
@@ -57,10 +56,10 @@ export default function AppShell() {
             <button
               type="button"
               onClick={() => signOut()}
-              aria-label={t("common.signOut")}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               <LogOut className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">{t("common.signOut")}</span>
             </button>
           </div>
         </div>

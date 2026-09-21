@@ -6,10 +6,13 @@ import SafetyDisclaimer from "@/components/SafetyDisclaimer";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/i18n/useI18n";
+import { useAuth } from "@/lib/AuthContext";
 import { REGION_CODES, getRegionConfig } from "@/domain/safety/regions";
 
 export default function HelpNow() {
   const { t } = useI18n();
+  const { isAuthenticated } = useAuth();
+  const backTo = isAuthenticated ? "/today" : "/";
   const [region, setRegion] = useState("OTHER");
   const [showTrusted, setShowTrusted] = useState(false);
   const config = getRegionConfig(region);
@@ -18,7 +21,7 @@ export default function HelpNow() {
     <div className="min-h-screen bg-background">
       <PublicHeader />
       <main className="mx-auto max-w-2xl px-6 py-10">
-        <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
+        <Link to={backTo} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           {t("common.back")}
         </Link>
@@ -79,7 +82,7 @@ export default function HelpNow() {
               </p>
             )}
             <Link
-              to="/"
+              to={backTo}
               className="inline-flex items-center justify-center rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
             >
               {t("helpnow.return")}

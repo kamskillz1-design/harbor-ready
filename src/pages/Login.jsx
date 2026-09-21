@@ -25,7 +25,7 @@ export default function Login() {
     setLoading(true);
     try {
       await loginViaEmailPassword(email, password);
-      window.location.href = afterLogin;
+      window.location.replace(afterLogin);
     } catch (err) {
       setError(t("auth.login.error"));
     } finally {
