@@ -1,9 +1,10 @@
-const MODELS = [
+const FALLBACK_MODELS = [
   process.env.GEMINI_MODEL,
+  "gemini-3.8-flash",
+  "gemini-3.5-flash",
+  "gemini-3.1-flash-lite",
   "gemini-2.5-flash",
   "gemini-2.0-flash",
-  "gemini-flash-latest",
-  "gemini-1.5-flash",
 ].filter(Boolean);
 
 function languageName(code) {
@@ -23,15 +24,32 @@ function systemPrompt(language) {
   ].join(" ");
 }
 
+async function listModels(key) {
+  const response = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models?pageSize=100",
+    { headers: { "x-goog-api-key": key } }
+  );
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error?.message || "Could not list Gemini models");
+  }
+  const names = (data.models || [])
+    .filter((model) => (model.supportedGenerationMethods || []).includes("generateContent"))
+    .map((model) => String(model.name || "").replace(/^models\//, ""));
+  return names;
+}
+
 async function callGemini(key, model, contents, language) {
   const url =
     "https://generativelanguage.googleapis.com/v1beta/models/" +
     encodeURIComponent(model) +
-    ":generateContent?key=" +
-    encodeURIComponent(key);
+    ":generateContent";
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": key,
+    },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: systemPrompt(language) }] },
       contents,
@@ -45,9 +63,8 @@ async function callGemini(key, model, contents, language) {
     .trim();
   return {
     ok: response.ok && !!reply,
-    status: response.status,
     reply: reply || "",
-    error: data?.error?.message || (!response.ok ? "Gemini request failed" : "Empty Gemini reply"),
+    error: data?.error?.message || (!response.ok ? "Gemini request failed (" + response.status + ")" : "Empty Gemini reply"),
   };
 }
 
@@ -57,7 +74,7 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     res.status(200).json({
       configured: Boolean(process.env.GEMINI_API_KEY),
-      models: MODELS,
+      models: FALLBACK_MODELS,
     });
     return;
   }
@@ -106,8 +123,22 @@ export default async function handler(req, res) {
   });
   contents.push({ role: "user", parts: [{ text }] });
 
+  let models = FALLBACK_MODELS.slice();
+  try {
+    const available = await listModels(key);
+    const preferred = FALLBACK_MODELS.filter((name) => available.includes(name));
+    const extras = available.filter(
+      (name) => /flash/i.test(name) && !name.includes("image") && !preferred.includes(name)
+    );
+    if (preferred.length || extras.length) {
+      models = [...preferred, ...extras].slice(0, 8);
+    }
+  } catch (err) {
+    // Keep fallback list if listing fails (restricted key, etc.)
+  }
+
   let lastError = "Gemini request failed";
-  for (const model of MODELS) {
+  for (const model of models) {
     try {
       const result = await callGemini(key, model, contents, language);
       if (result.ok) {

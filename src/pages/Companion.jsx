@@ -13,7 +13,7 @@ export default function Companion() {
   const [messages, setMessages] = useState(undefined);
   const [error, setError] = useState(false);
   const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState(false);
+  const [sendError, setSendError] = useState("");
   const bottomRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -57,7 +57,7 @@ export default function Companion() {
 
   const handleSend = async (text) => {
     setSending(true);
-    setSendError(false);
+    setSendError("");
     const history = messages
       .slice(-12)
       .filter((m) => m.content)
@@ -66,7 +66,7 @@ export default function Companion() {
       const result = await sendMessage(text, history, language);
       setMessages((current) => [...current, result.userMessage, result.companionMessage]);
     } catch (e) {
-      setSendError(true);
+      setSendError(e?.detail ? String(e.detail) : t("errors.AI_UNAVAILABLE"));
       await load();
     } finally {
       setSending(false);
@@ -82,7 +82,7 @@ export default function Companion() {
 
       {sendError && (
         <p className="text-sm text-destructive" role="alert">
-          {t("errors.AI_UNAVAILABLE")}
+          {sendError}
         </p>
       )}
 

@@ -40,7 +40,9 @@ async function fetchGeminiReply(text, history, language) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data?.reply) {
-    throw new AppError(ErrorCodes.AI_UNAVAILABLE);
+    const err = new AppError(ErrorCodes.AI_UNAVAILABLE);
+    err.detail = data?.error || "";
+    throw err;
   }
   return String(data.reply).slice(0, 4000);
 }
