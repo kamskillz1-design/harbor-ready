@@ -38,7 +38,7 @@ export default function Register() {
     try {
       const data = await register({ email, password });
       if (data?.session) {
-        window.location.href = afterAuthPath();
+        window.location.replace(afterAuthPath());
         return;
       }
       setShowOtp(true);
@@ -54,7 +54,7 @@ export default function Register() {
     setLoading(true);
     try {
       await verifyOtp({ email, otpCode });
-      window.location.href = afterAuthPath();
+      window.location.replace(afterAuthPath());
     } catch (err) {
       setError(t("auth.otp.error"));
     } finally {
