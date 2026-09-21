@@ -1,5 +1,7 @@
 const FALLBACK_MODELS = [
   process.env.GEMINI_MODEL,
+  "gemini-3.6-flash",
+  "gemini-3.6-flash-lite",
   "gemini-3.8-flash",
   "gemini-3.5-flash",
   "gemini-3.1-flash-lite",
@@ -126,15 +128,12 @@ export default async function handler(req, res) {
   let models = FALLBACK_MODELS.slice();
   try {
     const available = await listModels(key);
-    const preferred = FALLBACK_MODELS.filter((name) => available.includes(name));
     const extras = available.filter(
-      (name) => /flash/i.test(name) && !name.includes("image") && !preferred.includes(name)
+      (name) => /flash/i.test(name) && !name.includes("image") && !models.includes(name)
     );
-    if (preferred.length || extras.length) {
-      models = [...preferred, ...extras].slice(0, 8);
-    }
+    models = [...models, ...extras].slice(0, 10);
   } catch (err) {
-    // Keep fallback list if listing fails (restricted key, etc.)
+    // Keep fallback list if listing fails
   }
 
   let lastError = "Gemini request failed";
