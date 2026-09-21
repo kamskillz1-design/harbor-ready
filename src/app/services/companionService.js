@@ -12,7 +12,6 @@ function normalizeMode(mode) {
   return "normal";
 }
 
-// Client safety screen (replaces Base44 InvokeLLM). Conservative keyword match only.
 function classifyRisk(text) {
   const t = (text || "").toLowerCase();
   const crisisHints = [
@@ -49,6 +48,18 @@ function localReply(language, elevated) {
     : "Gracias por compartirlo. Te escucho. ¿Qué sería un siguiente paso pequeño y amable?";
 }
 
+async function fetchGeminiReply(text, history, language) {
+  const response = await fetch("/api/companion-reply", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, history, language }),
+  });
+  if (!response.ok) throw new Error("gemini_failed");
+  const data = await response.json();
+  if (!data?.reply) throw new Error("gemini_empty");
+  return String(data.reply).slice(0, 4000);
+}
+
 export async function sendMessage(text, history, language) {
   const validated = validateCompanionMessage(text);
   if (!validated.valid) {
@@ -75,7 +86,13 @@ export async function sendMessage(text, history, language) {
     };
   }
 
-  const reply = localReply(language, risk === "elevated");
+  let reply;
+  try {
+    reply = await fetchGeminiReply(trimmed, history, language);
+  } catch (e) {
+    reply = localReply(language, risk === "elevated");
+  }
+
   const companionMessage = await createCompanionMessage({
     role: "companion",
     content: reply,
