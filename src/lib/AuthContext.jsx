@@ -5,6 +5,15 @@ import { isSupportedLanguage, setAppLanguage } from "@/i18n";
 
 const AuthContext = createContext();
 
+function applyProfileLanguage(profileUser) {
+  // Do not overwrite the public switcher with the DB default ('es') until
+  // the user has finished onboarding and explicitly saved a language.
+  if (!profileUser?.onboardingCompletedAt) return;
+  if (profileUser.language && isSupportedLanguage(profileUser.language)) {
+    setAppLanguage(profileUser.language);
+  }
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -25,9 +34,7 @@ export const AuthProvider = ({ children }) => {
         setUser(currentUser);
         setIsAuthenticated(true);
         setAuthError(null);
-        if (currentUser.language && isSupportedLanguage(currentUser.language)) {
-          setAppLanguage(currentUser.language);
-        }
+        applyProfileLanguage(currentUser);
       } else {
         setUser(null);
         setIsAuthenticated(false);
@@ -83,9 +90,7 @@ export const AuthProvider = ({ children }) => {
         setUser(merged);
         setIsAuthenticated(!!merged);
         setAuthError(null);
-        if (merged?.language && isSupportedLanguage(merged.language)) {
-          setAppLanguage(merged.language);
-        }
+        applyProfileLanguage(merged);
         setAuthChecked(true);
         setIsLoadingAuth(false);
       }

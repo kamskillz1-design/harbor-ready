@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n/useI18n";
 import { getAppLanguage, setAppLanguage } from "@/i18n";
 import PageLoader from "@/components/PageLoader";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { completeOnboarding, getMyProfile } from "@/app/services/profileService";
 import { AppError } from "@/domain/errors";
 import { validateDisplayName, validateTimezone } from "@/domain/validation/profile";
@@ -23,7 +24,7 @@ import {
 const TOTAL_STEPS = 8;
 
 export default function Onboarding() {
-  const { t } = useI18n();
+  const { t, language: uiLanguage } = useI18n();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
   const [step, setStep] = useState(0);
@@ -37,6 +38,12 @@ export default function Onboarding() {
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [adultConfirmed, setAdultConfirmed] = useState(false);
   const [agreed, setAgreed] = useState(false);
+
+  useEffect(() => {
+    if (uiLanguage && uiLanguage !== language) {
+      setLanguage(uiLanguage);
+    }
+  }, [uiLanguage]);
 
   useEffect(() => {
     let active = true;
@@ -80,6 +87,7 @@ export default function Onboarding() {
     setError("");
     setSubmitting(true);
     try {
+      setAppLanguage(language);
       await completeOnboarding(state);
       navigate("/today", { replace: true });
     } catch (err) {
@@ -133,6 +141,9 @@ export default function Onboarding() {
   return (
     <div className="min-h-screen bg-background px-6 py-10">
       <div className="mx-auto w-full max-w-xl">
+        <div className="mb-4 flex items-center justify-end">
+          <LanguageSwitcher />
+        </div>
         <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {t("onboarding.stepOf", { current: step + 1, total: TOTAL_STEPS })}
         </p>
