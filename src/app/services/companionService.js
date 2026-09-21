@@ -32,31 +32,16 @@ function classifyRisk(text) {
   return "none";
 }
 
-function localReply(language, elevated) {
-  if (language === "eu") {
-    return elevated
-      ? "Zaila dirudi orain. Hemen nago zurekin. Hartu arnasa, eta behar baduzu, hitz egin konfiantzazko norbaitekin edo ireki Laguntza orain."
-      : "Eskerrik asko partekatzeagatik. Entzuten zaitut. Zer beharko zenuke orain, pauso txiki batean?";
-  }
-  if (language === "en") {
-    return elevated
-      ? "That sounds heavy. I'm here with you. Take a breath, and if you can, reach out to someone you trust or open Help Now."
-      : "Thank you for sharing that. I'm listening. What would feel like a small, kind next step?";
-  }
-  return elevated
-    ? "Suena difícil. Estoy aquí. Respira un momento, y si puedes, habla con alguien de confianza o abre Ayuda ahora."
-    : "Gracias por compartirlo. Te escucho. ¿Qué sería un siguiente paso pequeño y amable?";
-}
-
 async function fetchGeminiReply(text, history, language) {
   const response = await fetch("/api/companion-reply", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, history, language }),
   });
-  if (!response.ok) throw new Error("gemini_failed");
-  const data = await response.json();
-  if (!data?.reply) throw new Error("gemini_empty");
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data?.reply) {
+    throw new AppError(ErrorCodes.AI_UNAVAILABLE);
+  }
   return String(data.reply).slice(0, 4000);
 }
 
@@ -86,13 +71,7 @@ export async function sendMessage(text, history, language) {
     };
   }
 
-  let reply;
-  try {
-    reply = await fetchGeminiReply(trimmed, history, language);
-  } catch (e) {
-    reply = localReply(language, risk === "elevated");
-  }
-
+  const reply = await fetchGeminiReply(trimmed, history, language);
   const companionMessage = await createCompanionMessage({
     role: "companion",
     content: reply,

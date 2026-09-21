@@ -1,4 +1,10 @@
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const MODELS = [
+  process.env.GEMINI_MODEL,
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-flash-latest",
+  "gemini-1.5-flash",
+].filter(Boolean);
 
 function languageName(code) {
   if (code === "eu") return "Basque (Euskara)";
@@ -17,7 +23,45 @@ function systemPrompt(language) {
   ].join(" ");
 }
 
+async function callGemini(key, model, contents, language) {
+  const url =
+    "https://generativelanguage.googleapis.com/v1beta/models/" +
+    encodeURIComponent(model) +
+    ":generateContent?key=" +
+    encodeURIComponent(key);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: systemPrompt(language) }] },
+      contents,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 400 },
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  const reply = data?.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text || "")
+    .join("")
+    .trim();
+  return {
+    ok: response.ok && !!reply,
+    status: response.status,
+    reply: reply || "",
+    error: data?.error?.message || (!response.ok ? "Gemini request failed" : "Empty Gemini reply"),
+  };
+}
+
 export default async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store");
+
+  if (req.method === "GET") {
+    res.status(200).json({
+      configured: Boolean(process.env.GEMINI_API_KEY),
+      models: MODELS,
+    });
+    return;
+  }
+
   if (req.method === "OPTIONS") {
     res.status(204).end();
     return;
@@ -29,11 +73,20 @@ export default async function handler(req, res) {
 
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
-    res.status(500).json({ error: "GEMINI_API_KEY is not set" });
+    res.status(500).json({ error: "GEMINI_API_KEY is not set on the server" });
     return;
   }
 
-  const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
+  let body = req.body;
+  if (typeof body === "string") {
+    try {
+      body = JSON.parse(body || "{}");
+    } catch {
+      body = {};
+    }
+  }
+  body = body || {};
+
   const text = typeof body.text === "string" ? body.text.trim() : "";
   const language = body.language === "en" || body.language === "eu" ? body.language : "es";
   const history = Array.isArray(body.history) ? body.history.slice(-12) : [];
@@ -53,40 +106,19 @@ export default async function handler(req, res) {
   });
   contents.push({ role: "user", parts: [{ text }] });
 
-  const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    encodeURIComponent(MODEL) +
-    ":generateContent?key=" +
-    encodeURIComponent(key);
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt(language) }] },
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 400,
-        },
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      res.status(502).json({ error: data?.error?.message || "Gemini request failed" });
-      return;
+  let lastError = "Gemini request failed";
+  for (const model of MODELS) {
+    try {
+      const result = await callGemini(key, model, contents, language);
+      if (result.ok) {
+        res.status(200).json({ reply: result.reply, model });
+        return;
+      }
+      lastError = result.error || lastError;
+    } catch (err) {
+      lastError = err?.message || lastError;
     }
-    const reply = data?.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text || "")
-      .join("")
-      .trim();
-    if (!reply) {
-      res.status(502).json({ error: "Empty Gemini reply" });
-      return;
-    }
-    res.status(200).json({ reply });
-  } catch (err) {
-    res.status(502).json({ error: "Gemini request failed" });
   }
+
+  res.status(502).json({ error: lastError });
 }
