@@ -3,7 +3,6 @@
 import en from "./locales/en.js";
 import es from "./locales/es.js";
 import eu from "./locales/basque.js";
-// All three catalogs are static ES modules resolved at build time.
 
 const DICTIONARIES = { en: en, es: es, eu: eu };
 const STORAGE_KEY = "harbor_language";
@@ -14,7 +13,7 @@ let currentLanguage = null;
 const listeners = new Set();
 
 export function getSupportedLanguages() {
-  return ["es", "eu", "en"];
+  return ["en", "es", "eu"];
 }
 
 export function isSupportedLanguage(code) {
