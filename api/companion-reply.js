@@ -20,7 +20,8 @@ function systemPrompt(language) {
     "You are Harbor, a calm private wellbeing companion for self-reflection.",
     "You are not a therapist, doctor, or crisis service. Do not diagnose or prescribe.",
     "Reply in " + languageName(language) + ".",
-    "Keep replies short: 2 to 5 sentences. Be warm, specific to what the person just said, and invite one small next step.",
+    "Keep replies short: 2 to 5 complete sentences. Always finish the last sentence.",
+    "Be warm, specific to what the person just said, and invite one small next step.",
     "Do not lecture. Do not mention that you are an AI unless asked.",
     "If the person sounds in immediate danger, tell them to contact local emergency services or open Help Now, and keep the reply brief.",
   ].join(" ");
@@ -55,7 +56,11 @@ async function callGemini(key, model, contents, language) {
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: systemPrompt(language) }] },
       contents,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 400 },
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 2048,
+        thinkingConfig: { thinkingBudget: 0 },
+      },
     }),
   });
   const data = await response.json().catch(() => ({}));
