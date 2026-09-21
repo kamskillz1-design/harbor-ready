@@ -14,7 +14,7 @@ export default function Companion() {
   const [error, setError] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
-  const bottomRef = useRef(null);
+  const threadRef = useRef(null);
 
   const load = useCallback(async () => {
     setError(false);
@@ -30,9 +30,8 @@ export default function Companion() {
   }, [load]);
 
   useEffect(() => {
-    if (messages && messages.length > 0 && bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
-    }
+    const el = threadRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   if (error) {
@@ -88,19 +87,19 @@ export default function Companion() {
 
       <Composer disabled={sending || interrupted} onSend={handleSend} />
 
-      {messages.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          {t("companion.emptyTitle")} — {t("companion.emptyBody")}
-        </p>
-      )}
-
       {interrupted && <SafetyBanner />}
 
-      <div className="flex flex-col gap-4">
-        {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
-        ))}
-        <div ref={bottomRef} aria-hidden="true" />
+      <div
+        ref={threadRef}
+        className="flex max-h-[min(52vh,28rem)] flex-col gap-4 overflow-y-auto rounded-3xl border border-border bg-card/40 p-4"
+      >
+        {messages.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {t("companion.emptyTitle")} — {t("companion.emptyBody")}
+          </p>
+        ) : (
+          messages.map((message) => <MessageBubble key={message.id} message={message} />)
+        )}
       </div>
 
       <SafetyDisclaimer />
