@@ -30,7 +30,7 @@ export default function Companion() {
   }, [load]);
 
   useEffect(() => {
-    if (bottomRef.current) {
+    if (messages && messages.length > 0 && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [messages]);
@@ -74,26 +74,10 @@ export default function Companion() {
   };
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex max-w-3xl flex-col gap-4">
       <div className="space-y-1">
         <h1 className="font-display text-3xl font-semibold text-foreground">{t("companion.title")}</h1>
         <p className="text-sm text-muted-foreground">{t("companion.subtitle")}</p>
-      </div>
-
-      <SafetyDisclaimer />
-
-      <div className="flex min-h-[240px] flex-col gap-4">
-        {messages.length === 0 && (
-          <div className="rounded-3xl border border-dashed border-border p-10 text-center">
-            <h2 className="font-display text-lg font-semibold text-foreground">{t("companion.emptyTitle")}</h2>
-            <p className="mt-2 text-sm text-muted-foreground">{t("companion.emptyBody")}</p>
-          </div>
-        )}
-        {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
-        ))}
-        {interrupted && <SafetyBanner />}
-        <div ref={bottomRef} aria-hidden="true" />
       </div>
 
       {sendError && (
@@ -103,6 +87,23 @@ export default function Companion() {
       )}
 
       <Composer disabled={sending || interrupted} onSend={handleSend} />
+
+      {messages.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          {t("companion.emptyTitle")} — {t("companion.emptyBody")}
+        </p>
+      )}
+
+      {interrupted && <SafetyBanner />}
+
+      <div className="flex flex-col gap-4">
+        {messages.map((message) => (
+          <MessageBubble key={message.id} message={message} />
+        ))}
+        <div ref={bottomRef} aria-hidden="true" />
+      </div>
+
+      <SafetyDisclaimer />
     </div>
   );
 }
